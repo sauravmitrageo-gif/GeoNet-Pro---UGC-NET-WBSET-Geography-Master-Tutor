@@ -62,3 +62,9 @@ export interface TopicPreset {
   paper: 'Paper 1' | 'Paper 2 (Geography)';
   badge: string;
 }
+
+export interface DailyGoal {
+  target: number;
+  todayPracticed: number;
+  date: string; // ISO date YYYY-MM-DD
+}

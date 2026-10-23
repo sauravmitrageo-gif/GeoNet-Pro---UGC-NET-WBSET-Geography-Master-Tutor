@@ -9,10 +9,14 @@ import {
   VolumeX,
   Award,
   Flame,
+  Target,
+  CheckCircle2,
+  BarChart3,
 } from 'lucide-react';
 import { sound } from '../utils/audio';
+import { DailyGoal } from '../types';
 
-export type ActiveTab = 'drill' | 'generator' | 'cbt' | 'syllabus' | 'vault';
+export type ActiveTab = 'drill' | 'generator' | 'cbt' | 'syllabus' | 'vault' | 'analytics';
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -25,6 +29,8 @@ interface HeaderProps {
     streak: number;
   };
   savedCount: number;
+  dailyGoal: DailyGoal;
+  onOpenDailyGoalModal: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -34,6 +40,8 @@ export const Header: React.FC<HeaderProps> = ({
   setIsMuted,
   stats,
   savedCount,
+  dailyGoal,
+  onOpenDailyGoalModal,
 }) => {
   const toggleSound = () => {
     const next = !isMuted;
@@ -48,6 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'cbt', label: 'NTA CBT Exam', icon: <MonitorCheck className="w-4 h-4" />, badge: 'Mock' },
     { id: 'syllabus', label: 'Syllabus & Units', icon: <BookOpen className="w-4 h-4" /> },
     { id: 'vault', label: 'Revision Vault', icon: <Bookmark className="w-4 h-4" />, badge: savedCount > 0 ? savedCount : undefined },
+    { id: 'analytics', label: 'Study Analytics', icon: <BarChart3 className="w-4 h-4 text-emerald-400" />, badge: 'New' },
   ];
 
   return (
@@ -114,6 +123,84 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Quick Metrics & Controls */}
           <div className="flex items-center space-x-2 sm:space-x-3">
+            {/* Daily Goal Circular Progress Bar */}
+            {(() => {
+              const radius = 12;
+              const circumference = 2 * Math.PI * radius;
+              const percentage = Math.min(
+                100,
+                Math.round((dailyGoal.todayPracticed / dailyGoal.target) * 100)
+              );
+              const strokeDashoffset = circumference - (percentage / 100) * circumference;
+              const isGoalMet = dailyGoal.todayPracticed >= dailyGoal.target;
+
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playClick();
+                    onOpenDailyGoalModal();
+                  }}
+                  title={`Daily Goal: ${dailyGoal.todayPracticed}/${dailyGoal.target} solved (${percentage}%). Click to adjust target.`}
+                  className={`flex items-center space-x-2 px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer group ${
+                    isGoalMet
+                      ? 'bg-amber-950/40 border-amber-500/50 hover:bg-amber-950/70 shadow-sm shadow-amber-500/20'
+                      : 'bg-slate-800/80 border-slate-700/80 hover:bg-slate-800 hover:border-teal-500/50'
+                  }`}
+                >
+                  {/* Circular SVG Ring */}
+                  <div className="relative w-8 h-8 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 32 32">
+                      {/* Background Track */}
+                      <circle
+                        cx="16"
+                        cy="16"
+                        r={radius}
+                        className="stroke-slate-700/60"
+                        strokeWidth="3"
+                        fill="transparent"
+                      />
+                      {/* Active Progress */}
+                      <circle
+                        cx="16"
+                        cy="16"
+                        r={radius}
+                        className={`transition-all duration-500 ease-out ${
+                          isGoalMet ? 'stroke-amber-400' : 'stroke-teal-400'
+                        }`}
+                        strokeWidth="3"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={strokeDashoffset}
+                        strokeLinecap="round"
+                        fill="transparent"
+                      />
+                    </svg>
+                    {/* Center Icon */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {isGoalMet ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                      ) : (
+                        <Target className="w-3 h-3 text-teal-400 group-hover:scale-110 transition-transform" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Text Badge */}
+                  <div className="text-left font-mono leading-none hidden sm:block">
+                    <div className="flex items-center space-x-1">
+                      <span className="text-xs font-bold text-white">
+                        {dailyGoal.todayPracticed}
+                      </span>
+                      <span className="text-[10px] text-slate-400">/{dailyGoal.target}</span>
+                    </div>
+                    <span className="text-[9px] uppercase font-sans font-semibold tracking-wider text-slate-400 block mt-0.5">
+                      {isGoalMet ? 'Goal Met' : 'Daily Goal'}
+                    </span>
+                  </div>
+                </button>
+              );
+            })()}
+
             {/* Streak Counter */}
             {stats.streak > 0 && (
               <div className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-orange-500/15 border border-orange-500/30 text-orange-400 text-xs font-bold animate-bounce">

@@ -17,7 +17,7 @@ import {
   ArrowRight,
   TrendingUp,
 } from 'lucide-react';
-import { UGCQuestion } from './types';
+import { UGCQuestion, DailyGoal } from './types';
 import { CURATED_QUESTIONS } from './data/curatedQuestions';
 import { Header, ActiveTab } from './components/Header';
 import { QuestionCard } from './components/QuestionCard';
@@ -26,6 +26,8 @@ import { CBTSimulator } from './components/CBTSimulator';
 import { SyllabusBrowser } from './components/SyllabusBrowser';
 import { RevisionVault } from './components/RevisionVault';
 import { TutorChatDrawer } from './components/TutorChatDrawer';
+import { DailyGoalModal } from './components/DailyGoalModal';
+import { StudyAnalytics } from './components/StudyAnalytics';
 import { sound } from './utils/audio';
 
 export default function App() {
@@ -61,6 +63,59 @@ export default function App() {
       return { correct: 0, total: 0, streak: 0 };
     }
   });
+
+  // Daily Practice Goal State
+  const todayDateStr = new Date().toISOString().split('T')[0];
+  const [dailyGoal, setDailyGoal] = useState<DailyGoal>(() => {
+    try {
+      const stored = localStorage.getItem('geonet_daily_goal');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.date === todayDateStr) {
+          return parsed;
+        } else {
+          // New calendar day: reset todayPracticed to 0, preserve target
+          return {
+            target: parsed.target || 10,
+            todayPracticed: 0,
+            date: todayDateStr,
+          };
+        }
+      }
+    } catch {
+      // Ignore
+    }
+    return {
+      target: 10,
+      todayPracticed: 0,
+      date: todayDateStr,
+    };
+  });
+
+  const [isDailyGoalModalOpen, setIsDailyGoalModalOpen] = useState(false);
+
+  // Save dailyGoal to local storage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('geonet_daily_goal', JSON.stringify(dailyGoal));
+    } catch {
+      // Ignore
+    }
+  }, [dailyGoal]);
+
+  const handleUpdateDailyGoal = (newTarget: number) => {
+    setDailyGoal((prev) => ({
+      ...prev,
+      target: newTarget,
+    }));
+  };
+
+  const handleResetTodayProgress = () => {
+    setDailyGoal((prev) => ({
+      ...prev,
+      todayPracticed: 0,
+    }));
+  };
 
   // Sound state
   const [isMuted, setIsMuted] = useState<boolean>(() => {
@@ -128,6 +183,15 @@ export default function App() {
       const nextStreak = isCorrect ? prev.streak + 1 : 0;
       return { correct: nextCorrect, total: nextTotal, streak: nextStreak };
     });
+
+    // Increment today's solved count towards daily practice goal
+    setDailyGoal((prev) => {
+      const nextPracticed = prev.todayPracticed + 1;
+      if (nextPracticed === prev.target) {
+        sound.playFanfare();
+      }
+      return { ...prev, todayPracticed: nextPracticed };
+    });
   };
 
   const handleOpenTutor = (question: UGCQuestion) => {
@@ -186,6 +250,8 @@ export default function App() {
         setIsMuted={setIsMuted}
         stats={userStats}
         savedCount={savedQuestions.length}
+        dailyGoal={dailyGoal}
+        onOpenDailyGoalModal={() => setIsDailyGoalModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -333,6 +399,15 @@ export default function App() {
             onGoToPractice={() => setActiveTab('drill')}
           />
         )}
+
+        {/* TAB 6: STUDY ANALYTICS */}
+        {activeTab === 'analytics' && (
+          <StudyAnalytics
+            userStats={userStats}
+            savedQuestions={savedQuestions}
+            allQuestions={allQuestions}
+          />
+        )}
       </main>
 
       {/* Floating Action Button: Ask Professor */}
@@ -352,6 +427,15 @@ export default function App() {
         isOpen={isTutorOpen}
         onClose={() => setIsTutorOpen(false)}
         activeQuestion={tutorQuestionContext}
+      />
+
+      {/* Daily Goal Setting Modal */}
+      <DailyGoalModal
+        isOpen={isDailyGoalModalOpen}
+        onClose={() => setIsDailyGoalModalOpen(false)}
+        dailyGoal={dailyGoal}
+        onUpdateDailyGoal={handleUpdateDailyGoal}
+        onResetTodayProgress={handleResetTodayProgress}
       />
     </div>
   );

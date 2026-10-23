@@ -1,0 +1,6 @@
+{
+  "name": "GeoNet Pro - UGC NET & WBSET Geography Master Tutor",
+  "description": "High-level NTA UGC NET & WBSET Paper 2 (Geography) and Paper 1 master tutor with CBT drill, statement-based and assertion-reasoning questions, and step-by-step option debunker.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
